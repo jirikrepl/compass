@@ -1,5 +1,6 @@
 import createDebug from 'debug';
 import { promisify } from 'util';
+import { connect, convertConnectionModelToOptions } from 'mongodb-data-service';
 
 const debug = createDebug('mongodb-compass:compass-connect:connection-attempt');
 
@@ -8,18 +9,17 @@ function isConnectionAttemptTerminatedError(err) {
 }
 
 class ConnectionAttempt {
-  constructor() {
+  constructor(connectFn) {
+    this._connectFn = connectFn;
     this._cancelled = new Promise((resolve) => {
       this._cancelConnectionAttempt = () => resolve(null);
     });
   }
 
-  connect(dataService) {
-    this._dataService = dataService;
-
+  connect(connectionModel) {
     return Promise.race([
       this._cancelled,
-      this._connect()
+      this._connect(connectionModel)
     ]);
   }
 
@@ -28,16 +28,14 @@ class ConnectionAttempt {
     this._close();
   }
 
-  async _connect() {
+  async _connect(connectionModel) {
     if (this._closed) {
       return;
     }
 
+    const options = convertConnectionModelToOptions(connectionModel);
     try {
-      const runConnect = promisify(
-        this._dataService.connect.bind(this._dataService)
-      );
-      await runConnect();
+      this._dataService = await this._connectFn(options);
       return this._dataService;
     } catch (err) {
       if (isConnectionAttemptTerminatedError(err)) {
@@ -77,6 +75,6 @@ class ConnectionAttempt {
   }
 }
 
-export function createConnectionAttempt() {
-  return new ConnectionAttempt();
+export function createConnectionAttempt(connectFn = connect) {
+  return new ConnectionAttempt(connectFn);
 }
