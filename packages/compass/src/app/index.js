@@ -26,8 +26,8 @@ require('./setup-hadron-caches');
 /**
  * The main entrypoint for the application!
  */
-var electron = require('electron');
-var APP_VERSION = electron.remote.app.getVersion();
+const { remote: { app: electronApp, nativeTheme }, shell } = require('electron');
+const APP_VERSION = electronApp.getVersion();
 
 var _ = require('lodash');
 var View = require('ampersand-view');
@@ -48,6 +48,8 @@ marky.stop('Migrations');
 var React = require('react');
 var ReactDOM = require('react-dom');
 var { Action } = require('@mongodb-js/hadron-plugin-manager');
+const darkreader = require('darkreader');
+const darkreaderOptions = { brightness: 100, contrast: 90, sepia: 10 };
 
 ipc.once('app:launched', function() {
   console.log('in app:launched');
@@ -61,6 +63,22 @@ var debug = require('debug')('mongodb-compass:app');
 window.addEventListener('error', (event) => {
   event.preventDefault();
   ipc.call('compass:error:fatal', { message: event.error.message, stack: event.error.stack });
+});
+
+ipc.on('app:darkreader-enable', () => {
+  darkreader.enable(darkreaderOptions);
+});
+
+ipc.on('app:darkreader-disable', () => {
+  darkreader.disable();
+});
+
+nativeTheme.on('updated', () => {
+  if (nativeTheme.shouldUseDarkColors) {
+    darkreader.enable(darkreaderOptions);
+  } else {
+    darkreader.disable();
+  }
 });
 
 /**
@@ -172,6 +190,9 @@ var Application = View.extend({
     // or so if you move this to the top of the file.
     require('local-links');
     require('mongodb-instance-model');
+    if (nativeTheme.shouldUseDarkColors) {
+      darkreader.enable(darkreaderOptions);
+    }
     marky.stop('Pre-loading additional modules required to connect');
   },
   /**
@@ -262,7 +283,7 @@ var Application = View.extend({
     } else if (event.target.getAttribute('href') !== '#') {
       event.preventDefault();
       event.stopPropagation();
-      electron.shell.openExternal(event.target.href);
+      shell.openExternal(event.target.href);
     }
   },
   fetchUser: function(done) {

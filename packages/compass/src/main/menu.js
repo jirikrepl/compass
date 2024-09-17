@@ -303,6 +303,18 @@ function viewSubMenu() {
           ipc.broadcast('window:zoom-out');
         }
       },
+      {
+        label: 'Darkmode Enable',
+        click: function() {
+          ipc.broadcast('app:darkreader-enable');
+        }
+      },
+      {
+        label: 'Darkmode Disable',
+        click: function() {
+          ipc.broadcast('app:darkreader-disable');
+        }
+      },
       separator(),
       {
         label: '&Toggle DevTools',
